@@ -38,19 +38,23 @@ describe("MerkleTreeAirdrop", function() {
 
     await token.transfer(await airdropContract.getAddress(), ethers.parseEther("2000"))
 
-    return {root, airdropContract, merkletree, NFT_Contract, addr1, addr2, NoNFTAddress}
+    return {root, token, airdropContract, merkletree, NFT_Contract, addr1, addr2, NoNFTAddress}
 
   }
 
   describe('merkle tree deployment', function () {
     it("should allow a user to claim their airdrop using a valid proof", async function() {
-      const {root, addr1, merkletree, airdropContract } = await loadFixture(deployFixture)
+      const {root, token, addr1, merkletree, airdropContract } = await loadFixture(deployFixture)
 
       const proof = merkletree.getProof(0)
 
       await expect(airdropContract.connect(addr1).claimAirdrop(ethers.parseEther("100"), proof))
       .to.emit(airdropContract, "SuccessfulClaim")
       .withArgs(addr1.address, ethers.parseEther("100"))
+
+      expect(await token.balanceOf(addr1.address)).to.equal(ethers.parseEther("100"))
+
+
     })
 
     it("should reject invalid claims", async function() {
@@ -66,18 +70,18 @@ describe("MerkleTreeAirdrop", function() {
 
     })
 
-    // it('airdrop has already being claimed', async function () {
-    //   const {root, addr1, merkletree, airdropContract } = await loadFixture(deployFixture)
+    it('airdrop has already being claimed', async function () {
+      const {root, addr1, merkletree, airdropContract } = await loadFixture(deployFixture)
 
-    //   const leaf = [addr1.address, ethers.parseEther("100")]
+      const leaf = [addr1.address, ethers.parseEther("100")]
 
-    //   const proof = merkletree.getProof(leaf)
+      const proof = merkletree.getProof(leaf)
 
-    //   await airdropContract.connect(addr1).claimAirdrop(ethers.parseEther("100"), proof)
+      await airdropContract.connect(addr1).claimAirdrop(ethers.parseEther("100"), proof)
 
-    //   await expect(airdropContract.connect(addr1).claimAirdrop(ethers.parseEther("100"), proof))
-    //   .to.be.revertedWith("Airdrop already claimed.")
-    // })
+      await expect(airdropContract.connect(addr1).claimAirdrop(ethers.parseEther("100"), proof))
+      .to.be.revertedWith("Airdrop already claimed.")
+    })
 
   }) 
 
